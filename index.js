@@ -9,31 +9,16 @@ class ScraperPuppeteer {
         this.timeWaitClick = 500;
         this.urls = ["https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=17&search_by_map=true&sw_lat=40.40905406647768&sw_lng=-3.705462275072205&ne_lat=40.414397095593216&ne_lng=-3.69920720677469&s_tag=17boGCJc",
             "https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=18&search_by_map=true&sw_lat=40.41092513867345&sw_lng=-3.703897645186509&ne_lat=40.41257982118033&ne_lng=-3.700771836660386&s_tag=gSIPGig_"];
+        this.separatedFeatures = require("./data/separatedFeatures/separatedFeatures.json");
     }
 
     async main() {
         console.log("starting app");
-        for (let url of this.urls) {
-            console.log("\n--------");
-            console.log(url);
-            console.log("\n");
-
-            await this.initializePuppeteer();
-            await this.page.goto(url);
-            await this.page.waitFor(this.timeWaitStart);
-
-            const numberOfEntries = await this.extractNumberOfEntries();
-            console.log("found " + numberOfEntries + " entries in this page");
-
-            const prize = await this.extracPrize();
-            console.log("average prize " + prize + "  in this page");
-
-            await this.page.screenshot({ path: 'example.png' });
-
-            await this.browser.close();
-        };
-
-
+        for (let nmun in this.separatedFeatures) {
+            for (let cusecFeature of this.separatedFeatures[nmun]) {
+                await this.extractFromCusec(cusecFeature);
+            }
+        }
     }
 
     async extractFromCusec(cusecFeature) {
@@ -41,8 +26,24 @@ class ScraperPuppeteer {
         const cusec = cusecFeature.cusec;
         const boundingBox = cusecFeature.boundingBox;
         //https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=18&search_by_map=true&sw_lat=40.41092513867345&sw_lng=-3.703897645186509&ne_lat=40.41257982118033&ne_lng=-3.700771836660386&s_tag=gSIPGig_"];
-        const url = `https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=18&search_by_map=true&sw_lat=${boundingBox[0][1]}&sw_lng=${boundingBox[0][0]}&ne_lat=${boundingBox[1][0]}&ne_lng=${boundingBox[1][1]}&s_tag=gSIPGig_`;
+        const url = `https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=18&search_by_map=true&sw_lat=${boundingBox[0][1]}&sw_lng=${boundingBox[0][0]}&ne_lat=${boundingBox[1][1]}&ne_lng=${boundingBox[1][0]}&s_tag=gSIPGig_`;
+        console.log("\n--------");
+        console.log(url);
+        console.log("\n");
 
+        await this.initializePuppeteer();
+        await this.page.goto(url);
+        await this.page.waitFor(this.timeWaitStart);
+
+        const numberOfEntries = await this.extractNumberOfEntries();
+        console.log("found " + numberOfEntries + " entries in this page");
+
+        const prize = await this.extracPrize();
+        console.log("average prize " + prize + "  in this page");
+
+        await this.page.screenshot({ path: 'example.png' });
+
+        await this.browser.close();
     }
 
     async initializePuppeteer() {
