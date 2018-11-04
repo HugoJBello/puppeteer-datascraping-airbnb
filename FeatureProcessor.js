@@ -55,10 +55,11 @@ class FeatureProcessor {
 
     getBoundingBox(coordinates, type) {
         if (type === "MultiPolygon") {
-            let upperX;
-            let upperY;
-            let buttonX;
-            let buttonY;
+            let maxX = -180;
+            let maxY = -180;
+            let minX = 180;
+            let minY = 180;
+            /*
             let boundingBox = [coordinates[0][0][0], coordinates[0][0][0]];
             //console.log("\n------------------------------");
             //console.log(coordinates[0][0]);
@@ -69,6 +70,14 @@ class FeatureProcessor {
                 ]
             }
             return coordinates[0][0].reduce(reducer, boundingBox);
+            */
+            for (const point of coordinates[0][0]) {
+                maxX = Math.max(point[0], maxX);
+                maxY = Math.max(point[1], maxY);
+                minX = Math.min(point[0], minX);
+                minY = Math.min(point[1], minY);
+            }
+            return [[minX, maxY], [maxX, minY]];
         }
     }
 
