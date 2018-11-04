@@ -15,27 +15,34 @@ class FeatureProcessor {
             "Villaviciosa de Odón", "Navalcarnero", "Ciempozuelos", "Torrelodones",
             "Paracuellos de Jarama", "Mejorada del Campo", "Algete"]
         this.foundFeatures = {};
+        this.scrapingIndex = {};
         this.fileContents = fs.readFileSync("./data/SECC_CPV_E_20111101_01_R_INE_MADRID_cs_epsg.geojson.json", 'utf8');
         this.geoJson = JSON.parse(this.fileContents);
 
         this.outputDir = "data/separatedFeatures/";
-        this.outputFilename = "./data/separatedFeatures/separatedFeatures.json";
+        this.outputFilenameFeatures = "./data/separatedFeatures/separatedFeatures.json";
+        this.outputFilenameIndex = "./data/separatedFeatures/scrapinIndex.json";
     }
 
     main() {
-        this.filterNmuns();
+        this.generateProcessedFeaturesAndIndex();
         this.saveInFile();
         //console.log(this.foundFeatures);
     }
 
-    filterNmuns() {
+    generateProcessedFeaturesAndIndex() {
         for (let feature of this.geoJson["features"]) {
             if (this.nMuns.includes(feature.properties["NMUN"])) {
                 let procFeature = this.processFeature(feature);
                 if (feature.properties["NMUN"] in this.foundFeatures) {
-                    this.foundFeatures[feature.properties["NMUN"]].push(procFeature);
+                    this.foundFeatures[feature.properties["NMUN"]][procFeature.cusec] = procFeature;
+                    this.scrapingIndex[feature.properties["NMUN"]][procFeature.cusec] = false;
                 } else {
-                    this.foundFeatures[feature.properties["NMUN"]] = [procFeature];
+                    this.foundFeatures[feature.properties["NMUN"]] = {};
+                    this.scrapingIndex[feature.properties["NMUN"]] = {};
+                    this.foundFeatures[feature.properties["NMUN"]][procFeature.cusec] = procFeature;
+                    this.scrapingIndex[feature.properties["NMUN"]][procFeature.cusec] = false;
+
                 }
             }
         }
@@ -85,7 +92,9 @@ class FeatureProcessor {
         if (!fs.existsSync(this.outputDir)) {
             fs.mkdirSync("./" + outputDir);
         }
-        fs.writeFileSync(this.outputFilename, JSON.stringify(this.foundFeatures));
+        fs.writeFileSync(this.outputFilenameFeatures, JSON.stringify(this.foundFeatures));
+        fs.writeFileSync(this.outputFilenameIndex, JSON.stringify(this.scrapingIndex));
+
     }
 }
 
