@@ -42,7 +42,7 @@ module.exports = class ScraperPuppeteerAirbnb {
             }
         }
 
-        this.resetIndex();
+        this.resetIndexAndFinalize();
     }
 
     initializeMunicipio(nmun) {
@@ -233,10 +233,13 @@ module.exports = class ScraperPuppeteerAirbnb {
         fs.writeFileSync(this.scrapingIndexPath, JSON.stringify(this.scrapingIndex));
     }
 
-    resetIndex() {
+    resetIndexAndFinalize() {
         const FeatureProcessor = require('./FeatureProcessor');
         const featureProcessor = new FeatureProcessor();
         featureProcessor.processAllFeaturesAndCreateIndex();
+        this.date = new Date().toLocaleString().replace(/:/g, '_').replace(/ /g, '_').replace(/\//g, '_');
+        this.config.scrapingId = "scraping---" + this.date;
+        fs.writeFileSync("./data/config/scrapingConfig.json", JSON.stringify(this.config));
     }
 
 }
