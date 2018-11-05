@@ -123,7 +123,7 @@ module.exports = class ScraperPuppeteerAirbnb {
     }
 
     async anyResultsFound() {
-        let title = await this.titleNumEntries();
+        let title = await this.titleNumEntriesLess300();
         if (title) {
             return title.indexOf("alojamientos") > -1
         } else return false;
@@ -156,7 +156,10 @@ module.exports = class ScraperPuppeteerAirbnb {
     }
     async extractNumberOfEntries() {
         let numberOfEntries;
-        let titleNumEntries = await this.titleNumEntries();
+        let titleNumEntries = await this.titleNumEntriesLess300();
+        if (!titleNumEntries) {
+            titleNumEntries = await this.extractMoreThan300();
+        }
         if (titleNumEntries.indexOf("Más de") === -1) {
             numberOfEntries = titleNumEntries;
         } else {
@@ -166,7 +169,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         return numberOfEntries.replace("alojamientos", "").trim();
     }
 
-    async titleNumEntries() {
+    async titleNumEntriesLess300() {
         //_jmmm34f
         try {
             const div = await this.page.$('h3._jmmm34f>div>div');
@@ -180,8 +183,17 @@ module.exports = class ScraperPuppeteerAirbnb {
 
     }
 
-    async extractLessThan300() {
-
+    async extractMoreThan300() {
+        //_jmmm34f
+        try {
+            const div = await this.page.$('h3._jmmm34f>div');
+            const text = await (await div.getProperty('textContent')).jsonValue();
+            return text
+        } catch (err) {
+            console.log(err);
+            await this.saveHtml();
+            return undefined;
+        }
     }
 
     async goToLastPage() {
