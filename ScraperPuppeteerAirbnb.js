@@ -99,7 +99,7 @@ module.exports = class ScraperPuppeteerAirbnb {
             const newData = { date: new Date(), number_of_ads: numberOfEntries, average_prize: prize };
 
             await this.page.screenshot({ path: 'example.png' });
-
+            await this.saveHtml();
             await this.browser.close();
 
             return newData;
@@ -108,7 +108,10 @@ module.exports = class ScraperPuppeteerAirbnb {
             return undefined;
         }
     }
-
+    async saveHtml() {
+        let bodyHTML = await this.page.evaluate(() => document.body.innerHTML);
+        fs.writeFileSync("./data/htmPage.html", bodyHTML);
+    }
     async initializePuppeteer() {
         this.browser = await puppeteer.launch({
             //executablePath: '/usr/bin/chromium-browser'
@@ -171,6 +174,7 @@ module.exports = class ScraperPuppeteerAirbnb {
             return text
         } catch (err) {
             console.log(err);
+            await this.saveHtml();
             return undefined;
         }
 
@@ -198,6 +202,7 @@ module.exports = class ScraperPuppeteerAirbnb {
             await this.page.waitFor(this.timeWaitClick);
             return text.split(" ")[2].trim();
         } catch (err) {
+            await this.saveHtml();
             console.log(err);
         }
     }
