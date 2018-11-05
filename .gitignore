@@ -1,3 +1,6 @@
+
+data/tmp/scraping*
+
 # Logs
 logs
 *.log
