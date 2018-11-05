@@ -2,8 +2,8 @@
 const fs = require('fs');
 
 
-class FeatureProcessor {
-    constructor() {
+module.exports = class FeatureProcessor {
+    constructor(mapDir = "./data/", outputDir = "./data/separatedFeatures/") {
         this.nMuns = ["Madrid", "Móstoles", "Alcalá de Henares",
             "Fuenlabrada", "Leganés", "Getafe",
             "Alcorcón", "Torrejón de Ardoz", "Parla", "Alcobendas",
@@ -16,15 +16,15 @@ class FeatureProcessor {
             "Paracuellos de Jarama", "Mejorada del Campo", "Algete"]
         this.foundFeatures = {};
         this.scrapingIndex = {};
-        this.fileContents = fs.readFileSync("./data/SECC_CPV_E_20111101_01_R_INE_MADRID_cs_epsg.geojson.json", 'utf8');
+        this.fileContents = fs.readFileSync(mapDir + "SECC_CPV_E_20111101_01_R_INE_MADRID_cs_epsg.geojson.json", 'utf8');
         this.geoJson = JSON.parse(this.fileContents);
 
-        this.outputDir = "data/separatedFeatures/";
-        this.outputFilenameFeatures = "./data/separatedFeatures/separatedFeatures.json";
-        this.outputFilenameIndex = "./data/separatedFeatures/scrapinIndex.json";
+        this.outputDir = outputDir;
+        this.outputFilenameFeatures = this.outputDir + "separatedFeatures.json";
+        this.outputFilenameIndex = this.outputDir + "scrapingIndex.json";
     }
 
-    main() {
+    processAllFeaturesAndCreateIndex() {
         this.generateProcessedFeaturesAndIndex();
         this.saveInFile();
         //console.log(this.foundFeatures);
@@ -90,7 +90,7 @@ class FeatureProcessor {
 
     saveInFile() {
         if (!fs.existsSync(this.outputDir)) {
-            fs.mkdirSync("./" + outputDir);
+            fs.mkdirSync(outputDir);
         }
         fs.writeFileSync(this.outputFilenameFeatures, JSON.stringify(this.foundFeatures));
         fs.writeFileSync(this.outputFilenameIndex, JSON.stringify(this.scrapingIndex));
@@ -99,5 +99,3 @@ class FeatureProcessor {
 }
 
 
-const filterer = new FeatureProcessor();
-filterer.main();

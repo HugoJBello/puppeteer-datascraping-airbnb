@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 const randomUA = require('modern-random-ua');
-
+const fs = require('fs');
 module.exports = class ScraperPuppeteerAirbnb {
     constructor() {
         this.browser = null;
@@ -10,26 +10,68 @@ module.exports = class ScraperPuppeteerAirbnb {
         this.urls = ["https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=17&search_by_map=true&sw_lat=40.40905406647768&sw_lng=-3.705462275072205&ne_lat=40.414397095593216&ne_lng=-3.69920720677469&s_tag=17boGCJc",
             "https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=15&search_by_map=true&sw_lat=40.41092513867345&sw_lng=-3.703897645186509&ne_lat=40.41257982118033&ne_lng=-3.700771836660386&s_tag=gSIPGig_"];
         this.separatedFeatures = require("./data/separatedFeatures/separatedFeatures.json");
+        this.config = require("./data/config/scrapingConfig.json");
+
+        this.scrapingIndexPath = "./data/separatedFeatures/scrapingIndex.json";
+        this.scrapingIndex = require(this.scrapingIndexPath);
+        this.tmpDir = "data/tmp/"
+        this.tmpDirSession = "data/tmp/" + this.config.sessionId;
+        if (!fs.existsSync(this.tmpDir)) {
+            fs.mkdirSync("./" + this.tmpDir);
+        }
     }
 
     async main() {
         console.log("starting app");
+        //this.resetIndex();
         for (let nmun in this.separatedFeatures) {
+            console.log("-----------------------\n Scraping data from " + nmun + "\n-----------------------");
+            let municipioResults = this.initializeMunicipio(nmun);
             for (let cusecName in this.separatedFeatures[nmun]) {
-                let cusecFeature = this.separatedFeatures[nmun][cusecName];
-                await this.extractFromCusec(cusecFeature);
+                console.log("\n------->" + cusecName)
+                this.initializeConfigAndIndex();
+                if (!this.scrapingIndex[nmun][cusecName]) {
+                    let cusecFeature = this.separatedFeatures[nmun][cusecName];
+                    const cusecData = await this.extractFromCusec(cusecFeature);
+                    municipioResults.cusecs[cusecName] = cusecData;
+
+                    this.updateIndex(cusecName, nmun);
+                    this.saveData(municipioResults, nmun);
+                }
             }
         }
+
+        this.resetIndex();
+    }
+
+    initializeMunicipio(nmun) {
+        if (!fs.existsSync(this.tmpDirSession)) {
+            fs.mkdirSync("./" + this.tmpDirSession);
+        }
+        let nmunPath = this.tmpDirSession + "/" + nmun + "---" + this.config.sessionId + ".json";
+        if (fs.existsSync(nmunPath)) {
+            return require("./" + nmunPath);
+        } else {
+            return { nmun: nmun, scrapingId: this.config.sessionId, date: this.date, cusecs: {} };
+        }
+    }
+    initializeConfigAndIndex() {
+        this.config = require("./data/config/scrapingConfig.json");
+        this.scrapingIndex = require("./data/separatedFeatures/scrapingIndex.json");
+        this.tmpDirSession = "data/tmp/" + this.config.sessionId;
     }
 
     async extractFromCusec(cusecFeature) {
         try {
+
+            let index = require("./data/separatedFeatures/scrapingIndex.json");
             const nmun = cusecFeature.nmun;
             const cusec = cusecFeature.cusec;
             const boundingBox = cusecFeature.boundingBox;
             //https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=18&search_by_map=true&sw_lat=40.41092513867345&sw_lng=-3.703897645186509&ne_lat=40.41257982118033&ne_lng=-3.700771836660386&s_tag=gSIPGig_"];
             const url = `https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=15&search_by_map=true&sw_lat=${boundingBox[1][1]}&sw_lng=${boundingBox[0][0]}&ne_lat=${boundingBox[0][1]}&ne_lng=${boundingBox[1][0]}&s_tag=gSIPGig_`;
-            console.log("\n--------");
+
+            console.log("\n");
             console.log(url);
             console.log("\n");
 
@@ -53,11 +95,16 @@ module.exports = class ScraperPuppeteerAirbnb {
                 console.log("no results were found for this search");
             }
 
+            const newData = { date: new Date(), number_of_ads: numberOfEntries, average_prize: prize };
+
             await this.page.screenshot({ path: 'example.png' });
 
             await this.browser.close();
+
+            return newData;
         } catch (err) {
             console.log(err);
+            return undefined;
         }
     }
 
@@ -112,7 +159,7 @@ module.exports = class ScraperPuppeteerAirbnb {
             await this.goToLastPage()
             numberOfEntries = await this.readNumberOfEntries();
         }
-        return numberOfEntries;
+        return numberOfEntries.replace("alojamientos", "").trim();
     }
 
     async titleNumEntries() {
@@ -152,6 +199,30 @@ module.exports = class ScraperPuppeteerAirbnb {
         } catch (err) {
             console.log(err);
         }
+    }
+
+
+    saveData(municipioResults, nmun) {
+        let nmunPath = this.tmpDirSession + "/" + nmun + "---" + this.config.sessionId + ".json";
+        fs.writeFileSync(nmunPath, JSON.stringify(municipioResults));
+
+    }
+
+    saveDataAsCSV(municipioResults, nmun) {
+        let nmunPath = this.tmpDirSession + "/" + nmun + "---" + this.config.sessionId + ".csv";
+        const header = "CUSEC;NMUN;N_ANUN;P_MEDIO;FECHA\n"
+
+    }
+
+    updateIndex(cusecName, nmun) {
+        this.scrapingIndex[nmun][cusecName] = true;
+        fs.writeFileSync(this.scrapingIndexPath, JSON.stringify(this.scrapingIndex));
+    }
+
+    resetIndex() {
+        const FeatureProcessor = require('./FeatureProcessor');
+        const featureProcessor = new FeatureProcessor();
+        featureProcessor.processAllFeaturesAndCreateIndex();
     }
 
 }
