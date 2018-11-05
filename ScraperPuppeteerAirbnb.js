@@ -11,6 +11,7 @@ module.exports = class ScraperPuppeteerAirbnb {
             "https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=15&search_by_map=true&sw_lat=40.41092513867345&sw_lng=-3.703897645186509&ne_lat=40.41257982118033&ne_lng=-3.700771836660386&s_tag=gSIPGig_"];
         this.separatedFeatures = require("./data/separatedFeatures/separatedFeatures.json");
         this.config = require("./data/config/scrapingConfig.json");
+        this.MongoClient = require('mongodb').MongoClient;
 
         this.scrapingIndexPath = "./data/separatedFeatures/scrapingIndex.json";
         this.scrapingIndex = require(this.scrapingIndexPath);
@@ -36,7 +37,7 @@ module.exports = class ScraperPuppeteerAirbnb {
                     municipioResults.cusecs[cusecName] = cusecData;
 
                     this.updateIndex(cusecName, nmun);
-                    this.saveData(municipioResults, nmun);
+                    await this.saveData(municipioResults, nmun);
                 }
             }
         }
@@ -52,7 +53,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         if (fs.existsSync(nmunPath)) {
             return require("./" + nmunPath);
         } else {
-            return { nmun: nmun, scrapingId: this.config.sessionId, date: this.date, cusecs: {} };
+            return { _id: nmun + "---" + this.config.sessionId, nmun: nmun, scrapingId: this.config.sessionId, date: this.date, cusecs: {} };
         }
     }
     initializeConfigAndIndex() {
@@ -202,10 +203,23 @@ module.exports = class ScraperPuppeteerAirbnb {
     }
 
 
-    saveData(municipioResults, nmun) {
+    async saveData(municipioResults, nmun) {
         let nmunPath = this.tmpDirSession + "/" + nmun + "---" + this.config.sessionId + ".json";
         fs.writeFileSync(nmunPath, JSON.stringify(municipioResults));
+        if (this.config.useMongoDb) {
+            await this.saveDataInMongo(municipioResults, nmun);
+        }
+    }
 
+    async saveDataInMongo(municipioResults, nmun) {
+        await this.MongoClient.connect(this.config.mongoUrl, function (err, client) {
+            const db = "airbnb-db";
+            const collectionName = "summaries-airbnb-scraping";
+            console.log("saving data in mongodb");
+            const collection = client.db(db).collection(collectionName);
+            collection.save(municipioResults);
+            client.close();
+        });
     }
 
     saveDataAsCSV(municipioResults, nmun) {
