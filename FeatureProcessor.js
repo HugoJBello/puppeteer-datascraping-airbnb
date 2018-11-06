@@ -90,7 +90,7 @@ module.exports = class FeatureProcessor {
 
     saveInFile() {
         if (!fs.existsSync(this.outputDir)) {
-            fs.mkdirSync(outputDir);
+            fs.mkdirSync(this.outputDir);
         }
         fs.writeFileSync(this.outputFilenameFeatures, JSON.stringify(this.foundFeatures));
         fs.writeFileSync(this.outputFilenameIndex, JSON.stringify(this.scrapingIndex));
