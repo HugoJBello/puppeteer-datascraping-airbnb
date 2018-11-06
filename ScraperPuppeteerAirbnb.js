@@ -7,6 +7,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         this.page = null;
         this.timeWaitStart = 3 * 1000;
         this.timeWaitClick = 500;
+        this.retries = 3;
         this.urls = ["https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=17&search_by_map=true&sw_lat=40.40905406647768&sw_lng=-3.705462275072205&ne_lat=40.414397095593216&ne_lng=-3.69920720677469&s_tag=17boGCJc",
             "https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=15&search_by_map=true&sw_lat=40.41092513867345&sw_lng=-3.703897645186509&ne_lat=40.41257982118033&ne_lng=-3.700771836660386&s_tag=gSIPGig_"];
         this.separatedFeatures = require("./data/separatedFeatures/separatedFeatures.json");
@@ -71,30 +72,42 @@ module.exports = class ScraperPuppeteerAirbnb {
             const boundingBox = cusecFeature.boundingBox;
             //https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=18&search_by_map=true&sw_lat=40.41092513867345&sw_lng=-3.703897645186509&ne_lat=40.41257982118033&ne_lng=-3.700771836660386&s_tag=gSIPGig_"];
             const url = `https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=15&search_by_map=true&sw_lat=${boundingBox[1][1]}&sw_lng=${boundingBox[0][0]}&ne_lat=${boundingBox[0][1]}&ne_lng=${boundingBox[1][0]}&s_tag=gSIPGig_`;
-
             console.log("\n");
             console.log(url);
             console.log("\n");
+
 
             await this.initializePuppeteer();
             await this.page.goto(url);
             await this.page.waitFor(this.timeWaitStart);
 
-            let resultsFound = await this.anyResultsFound();
-            let capchaFound = false //await checkIfCapcha();
-
             let numberOfEntries;
             let prize;
-            if (resultsFound) {
-                console.log("results were found");
-                numberOfEntries = await this.extractNumberOfEntries();
-                console.log("found " + numberOfEntries + " entries in this page");
 
-                prize = await this.extracPrize();
-                console.log("average prize " + prize + "  in this page");
-            } else {
-                console.log("no results were found for this search");
+            let tryCount = 1;
+            let tryAgain = true
+            while (tryAgain) {
+                console.log("\n--->try number " + tryCount);
+                let resultsFound = await this.anyResultsFound();
+                let capchaFound = false //await checkIfCapcha();
+
+
+
+                if (resultsFound) {
+                    console.log("results were found");
+                    numberOfEntries = await this.extractNumberOfEntries();
+                    console.log("found " + numberOfEntries + " entries in this page");
+
+                    prize = await this.extracPrize();
+                    console.log("average prize " + prize + "  in this page");
+                } else {
+                    console.log("no results were found for this search");
+                }
+                tryAgain = (!numberOfEntries && tryCount < this.retries);
+                tryCount = tryCount + 1;
             }
+
+
 
             const newData = { date: new Date(), number_of_ads: numberOfEntries, average_prize: prize };
 
