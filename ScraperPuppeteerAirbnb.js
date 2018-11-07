@@ -276,7 +276,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         fs.writeFileSync(this.scrapingIndexPath, JSON.stringify(this.scrapingIndex));
     }
 
-    resetIndexAndFinalize() {
+    async resetIndexAndFinalize() {
         const FeatureProcessor = require('./FeatureProcessor');
         const featureProcessor = new FeatureProcessor();
         featureProcessor.processAllFeaturesAndCreateIndex();
