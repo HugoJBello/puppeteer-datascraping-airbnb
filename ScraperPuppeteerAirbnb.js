@@ -28,7 +28,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         //this.resetIndex();
         for (let nmun in this.separatedFeatures) {
             console.log("-----------------------\n Scraping data from " + nmun + "\n-----------------------");
-            let municipioResults = this.initializeMunicipio(nmun);
+            let municipioResults = await this.initializeMunicipio(nmun);
             for (let cusecName in this.separatedFeatures[nmun]) {
                 console.log("\n------->" + cusecName)
                 this.initializeConfigAndIndex();
@@ -38,7 +38,7 @@ module.exports = class ScraperPuppeteerAirbnb {
                     municipioResults.cusecs[cusecName] = cusecData;
 
                     this.updateIndex(cusecName, nmun);
-                    await this.saveData(municipioResults, nmun);
+                    this.saveData(municipioResults, nmun, cusecName);
                 }
             }
         }
@@ -46,17 +46,49 @@ module.exports = class ScraperPuppeteerAirbnb {
         this.resetIndexAndFinalize();
     }
 
-    initializeMunicipio(nmun) {
+    async initializeMunicipio(nmun) {
         if (!fs.existsSync(this.tmpDirSession)) {
             fs.mkdirSync("./" + this.tmpDirSession);
         }
         let nmunPath = this.tmpDirSession + "/" + nmun + "---" + this.config.sessionId + ".json";
         if (fs.existsSync(nmunPath)) {
-            return require("./" + nmunPath);
+            if (this.config.useMongoDb) {
+                return await this.getMunicipioFromMongo(nmun);
+            } else {
+                return require("./" + nmunPath);
+            }
         } else {
             return { _id: nmun + "---" + this.config.sessionId, nmun: nmun, scrapingId: this.config.sessionId, date: this.date, cusecs: {} };
         }
     }
+    async getMunicipioFromMongo(nmun) {
+        const self = this;
+        const url = this.config.mongoUrl;
+        const scrapingId = this.config.sessionId;
+        return new Promise((resolve, reject) => {
+            self.MongoClient.connect(url, function (err, client) {
+                if (err) {
+                    console.log(err);
+                    reject(err);
+                }
+                const dbName = "airbnb-db";
+                const collectionName = "summaries-airbnb-scraping";
+                console.log("geting from mongo");
+                const collection = client.db(dbName).collection(collectionName);
+                const _id = nmun + "---" + scrapingId;
+                console.log(_id);
+                collection.findOne({ _id }, (err, result) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    console.log(result);
+                    resolve(result);
+                });
+                client.close();
+            });
+        });
+    }
+
     initializeConfigAndIndex() {
         this.config = require("./data/config/scrapingConfig.json");
         this.scrapingIndex = require("./data/separatedFeatures/scrapingIndex.json");
@@ -233,34 +265,43 @@ module.exports = class ScraperPuppeteerAirbnb {
     }
 
 
-    async saveData(municipioResults, nmun) {
+    async saveData(municipioResults, nmun, cusecName) {
         let nmunPath = this.tmpDirSession + "/" + nmun + "---" + this.config.sessionId + ".json";
         fs.writeFileSync(nmunPath, JSON.stringify(municipioResults));
         if (this.config.useMongoDb) {
-            await this.saveDataInMongo(municipioResults, nmun);
-            await updateStateExecMongo(municipioResults.cusec, nmun, true);
+            await this.saveDataInMongo(municipioResults, nmun, cusecName);
+            // await this.updateStateExecMongo(municipioResults.cusec, nmun, true);
         }
     }
 
-    async saveDataInMongo(municipioResults, nmun) {
+    async saveDataInMongo(municipioResults, nmun, cusecName) {
+        const scrapingId = this.config.sessionId
         await this.MongoClient.connect(this.config.mongoUrl, function (err, client) {
             const db = "airbnb-db";
             const collectionName = "summaries-airbnb-scraping";
             console.log("saving data in mongodb");
             const collection = client.db(db).collection(collectionName);
             collection.save(municipioResults);
+
+            const dbIndex = "airbnb-db";
+            const collectionNameIndex = "state-execution-airbnb-scraping";
+            console.log("updating log in mongodb");
+            const executionDataLogIndex = { "_id": scrapingId, scrapingId: scrapingId, date: new Date(), active: true, lastNmun: nmun, lastCusec: cusecName }
+            const collectionIndex = client.db(dbIndex).collection(collectionNameIndex);
+            collectionIndex.save(executionDataLogIndex);
             client.close();
         });
     }
 
-    async updateStateExecMongo(cusec, nmun, active) {
+    async updateStateExecMongo(cusecName, nmun, active) {
+        const scrapingId = this.config.sessionId
         await this.MongoClient.connect(this.config.mongoUrl, function (err, client) {
-            const db = "airbnb-db";
-            const collectionName = "state-execution-airbnb-scraping";
+            const dbIndex = "index-airbnb-db";
+            const collectionNameIndex = "state-execution-airbnb-scraping";
             console.log("updating log in mongodb");
-            const executionDataLog = { "_id": scrapingId, scrapingId: scrapingId, active: active, lastNmun: nmun, lastCusec: cusec }
-            const collection = client.db(db).collection(collectionName);
-            collection.save(executionDataLog);
+            const executionDataLogIndex = { "_id": scrapingId, scrapingId: scrapingId, date: new Date(), active: active, lastNmun: nmun, lastCusec: cusecName }
+            const collectionIndex = client.db(dbIndex).collection(collectionNameIndex);
+            collectionIndex.save(executionDataLogIndex);
             client.close();
         });
     }

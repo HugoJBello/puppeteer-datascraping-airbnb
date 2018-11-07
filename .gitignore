@@ -1,6 +1,6 @@
 
 data/tmp
-
+scrapingIndex.json
 # Logs
 logs
 *.log
