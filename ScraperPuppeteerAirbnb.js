@@ -238,6 +238,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         fs.writeFileSync(nmunPath, JSON.stringify(municipioResults));
         if (this.config.useMongoDb) {
             await this.saveDataInMongo(municipioResults, nmun);
+            await updateStateExecMongo(municipioResults.cusec, nmun, true);
         }
     }
 
@@ -248,6 +249,18 @@ module.exports = class ScraperPuppeteerAirbnb {
             console.log("saving data in mongodb");
             const collection = client.db(db).collection(collectionName);
             collection.save(municipioResults);
+            client.close();
+        });
+    }
+
+    async updateStateExecMongo(cusec, nmun, active) {
+        await this.MongoClient.connect(this.config.mongoUrl, function (err, client) {
+            const db = "airbnb-db";
+            const collectionName = "state-execution-airbnb-scraping";
+            console.log("updating log in mongodb");
+            const executionDataLog = { "_id": scrapingId, scrapingId: scrapingId, active: active, lastNmun: nmun, lastCusec: cusec }
+            const collection = client.db(db).collection(collectionName);
+            collection.save(executionDataLog);
             client.close();
         });
     }
@@ -268,7 +281,8 @@ module.exports = class ScraperPuppeteerAirbnb {
         const featureProcessor = new FeatureProcessor();
         featureProcessor.processAllFeaturesAndCreateIndex();
         this.date = new Date().toLocaleString().replace(/:/g, '_').replace(/ /g, '_').replace(/\//g, '_');
-        this.config.scrapingId = "scraping---" + this.date;
+        if (this.config.saveDataInMongo) await this.updateStateExecMongo("none", "none", false);
+        this.config.scrapingId = "scraping-airbnb--" + this.date;
         fs.writeFileSync("./data/config/scrapingConfig.json", JSON.stringify(this.config));
     }
 
