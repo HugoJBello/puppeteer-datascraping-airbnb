@@ -323,7 +323,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         featureProcessor.processAllFeaturesAndCreateIndex();
         this.date = new Date().toLocaleString().replace(/:/g, '_').replace(/ /g, '_').replace(/\//g, '_');
         if (this.config.saveDataInMongo) await this.updateStateExecMongo("none", "none", false);
-        this.config.scrapingId = "scraping-airbnb--" + this.date;
+        this.config.sessionId = "scraping-airbnb--" + this.date;
         fs.writeFileSync("./data/config/scrapingConfig.json", JSON.stringify(this.config));
     }
 
