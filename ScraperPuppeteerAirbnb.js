@@ -1,6 +1,8 @@
 const puppeteer = require('puppeteer');
 const randomUA = require('modern-random-ua');
 const fs = require('fs');
+require('dotenv').load();
+
 module.exports = class ScraperPuppeteerAirbnb {
     constructor() {
         this.browser = null;
@@ -8,11 +10,11 @@ module.exports = class ScraperPuppeteerAirbnb {
         this.timeWaitStart = 3 * 1000;
         this.timeWaitClick = 500;
         this.retries = 3;
-        this.urls = ["https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=17&search_by_map=true&sw_lat=40.40905406647768&sw_lng=-3.705462275072205&ne_lat=40.414397095593216&ne_lng=-3.69920720677469&s_tag=17boGCJc",
-            "https://www.airbnb.es/s/madrid/homes?refinement_paths%5B%5D=%2Fhomes&query=madrid&click_referer=t%3ASEE_ALL%7Csid%3Aa7d1f39d-6aca-46ed-978b-e7866130e117%7Cst%3AMAGAZINE_HOMES&allow_override%5B%5D=&map_toggle=true&zoom=15&search_by_map=true&sw_lat=40.41092513867345&sw_lng=-3.703897645186509&ne_lat=40.41257982118033&ne_lng=-3.700771836660386&s_tag=gSIPGig_"];
-        this.separatedFeatures = require("./data/separatedFeatures/separatedFeatures.json");
+        this.mongoUrl = process.env['MONGO_URL'];
+
         this.config = require("./data/config/scrapingConfig.json");
         this.MongoClient = require('mongodb').MongoClient;
+        this.separatedFeatures = require("./data/separatedFeatures/separatedFeatures.json");
 
         this.scrapingIndexPath = "./data/separatedFeatures/scrapingIndex.json";
         this.scrapingIndex = require(this.scrapingIndexPath);
@@ -50,20 +52,28 @@ module.exports = class ScraperPuppeteerAirbnb {
         if (!fs.existsSync(this.tmpDirSession)) {
             fs.mkdirSync("./" + this.tmpDirSession);
         }
-        let nmunPath = this.tmpDirSession + "/" + nmun + "---" + this.config.sessionId + ".json";
-        if (fs.existsSync(nmunPath)) {
-            if (this.config.useMongoDb) {
-                return await this.getMunicipioFromMongo(nmun);
-            } else {
-                return require("./" + nmunPath);
+        if (this.config.useMongoDb) {
+            let municipio = await this.getMunicipioFromMongo(nmun);
+            if (!municipio) {
+                municipio = this.getNewMunicipio(nmun);
             }
+            return municipio;
         } else {
-            return { _id: nmun + "---" + this.config.sessionId, nmun: nmun, scrapingId: this.config.sessionId, date: this.date, cusecs: {} };
+            let nmunPath = this.tmpDirSession + "/" + nmun + "---" + this.config.sessionId + ".json";
+            if (fs.existsSync(nmunPath)) {
+                return require("./" + nmunPath);
+            } else {
+                return this.getNewMunicipio(nmun);
+            }
         }
+    }
+
+    getNewMunicipio(nmun) {
+        return { _id: nmun + "---" + this.config.sessionId, nmun: nmun, scrapingId: this.config.sessionId, date: this.date, cusecs: {} }
     }
     async getMunicipioFromMongo(nmun) {
         const self = this;
-        const url = this.config.mongoUrl;
+        const url = this.mongoUrl;
         const scrapingId = this.config.sessionId;
         return new Promise((resolve, reject) => {
             self.MongoClient.connect(url, function (err, client) {
@@ -276,7 +286,7 @@ module.exports = class ScraperPuppeteerAirbnb {
 
     async saveDataInMongo(municipioResults, nmun, cusecName) {
         const scrapingId = this.config.sessionId
-        await this.MongoClient.connect(this.config.mongoUrl, function (err, client) {
+        await this.MongoClient.connect(this.mongoUrl, function (err, client) {
             const db = "airbnb-db";
             const collectionName = "summaries-airbnb-scraping";
             console.log("saving data in mongodb");
@@ -295,7 +305,7 @@ module.exports = class ScraperPuppeteerAirbnb {
 
     async updateStateExecMongo(cusecName, nmun, active) {
         const scrapingId = this.config.sessionId
-        await this.MongoClient.connect(this.config.mongoUrl, function (err, client) {
+        await this.MongoClient.connect(this.mongoUrl, function (err, client) {
             const dbIndex = "index-airbnb-db";
             const collectionNameIndex = "state-execution-airbnb-scraping";
             console.log("updating log in mongodb");
