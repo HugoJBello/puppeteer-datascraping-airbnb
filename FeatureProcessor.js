@@ -3,7 +3,7 @@ const fs = require('fs');
 
 
 module.exports = class FeatureProcessor {
-    constructor(mapDir = "./data/", outputDir = "./data/separatedFeatures/") {
+    constructor(mapDir = "./data/", outputDir = "./data/separatedFeatures/", sessionId = "id") {
         this.nMuns = ["Madrid", "Móstoles", "Alcalá de Henares",
             "Fuenlabrada", "Leganés", "Getafe",
             "Alcorcón", "Torrejón de Ardoz", "Parla", "Alcobendas",
@@ -15,7 +15,7 @@ module.exports = class FeatureProcessor {
             "Villaviciosa de Odón", "Navalcarnero", "Ciempozuelos", "Torrelodones",
             "Paracuellos de Jarama", "Mejorada del Campo", "Algete"]
         this.foundFeatures = {};
-        this.scrapingIndex = {};
+        this.sessionId = sessionId;
         this.fileContents = fs.readFileSync(mapDir + "SECC_CPV_E_20111101_01_R_INE_MADRID_cs_epsg.geojson.json", 'utf8');
         this.geoJson = JSON.parse(this.fileContents);
 
@@ -31,17 +31,19 @@ module.exports = class FeatureProcessor {
     }
 
     generateProcessedFeaturesAndIndex() {
+        this.scrapingIndex = { "_id": this.sessionId, municipios: {} };
+
         for (let feature of this.geoJson["features"]) {
             if (this.nMuns.includes(feature.properties["NMUN"])) {
                 let procFeature = this.processFeature(feature);
                 if (feature.properties["NMUN"] in this.foundFeatures) {
                     this.foundFeatures[feature.properties["NMUN"]][procFeature.cusec] = procFeature;
-                    this.scrapingIndex[feature.properties["NMUN"]][procFeature.cusec] = false;
+                    this.scrapingIndex.municipios[feature.properties["NMUN"]].cusecs[procFeature.cusec] = false;
                 } else {
                     this.foundFeatures[feature.properties["NMUN"]] = {};
-                    this.scrapingIndex[feature.properties["NMUN"]] = {};
+                    this.scrapingIndex.municipios[feature.properties["NMUN"]] = { scraped: false, cusecs: {} };
                     this.foundFeatures[feature.properties["NMUN"]][procFeature.cusec] = procFeature;
-                    this.scrapingIndex[feature.properties["NMUN"]][procFeature.cusec] = false;
+                    this.scrapingIndex.municipios[feature.properties["NMUN"]].cusecs[procFeature.cusec] = false;
 
                 }
             }
@@ -52,10 +54,12 @@ module.exports = class FeatureProcessor {
         let processedFeature = {};
         processedFeature["nmun"] = feature.properties["NMUN"];
         processedFeature["cusec"] = feature.properties["CUSEC"];
-        processedFeature["coordinates"] = feature["geometry"].coordinates;
-        processedFeature["type"] = feature["geometry"].type;
-        const boundingBox = this.getBoundingBox(processedFeature["coordinates"], processedFeature["type"]);
+        //processedFeature["coordinates"] = feature["geometry"].coordinates;
+        //processedFeature["type"] = feature["geometry"].type;
+        const boundingBox = this.getBoundingBox(feature["geometry"].coordinates, feature["geometry"].type);
         processedFeature["boundingBox"] = boundingBox;
+        const centerPoint = this.getCenterPoint(boundingBox);
+        processedFeature["centerPoint"] = centerPoint;
         return processedFeature;
 
     }
@@ -86,6 +90,9 @@ module.exports = class FeatureProcessor {
             }
             return [[minX, maxY], [maxX, minY]];
         }
+    }
+    getCenterPoint(boundingBox) {
+        return [(boundingBox[0][0] + boundingBox[1][0]) / 2, (boundingBox[0][1] + boundingBox[1][1]) / 2]
     }
 
     saveInFile() {
