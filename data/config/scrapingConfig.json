@@ -1,5 +1,5 @@
 {
-    "sessionId": "scraping-airbnb--2018-11-8_11_29_48",
+    "sessionId": "scraping-airbnb--2018-11-12_11_29_58",
     "useMongoDb": true,
     "appId": "airbnb",
     "mongoUrl": "mongodb+srv://fresh:1234@cluster0-ojz1y.mongodb.net/real-state-db?retryWrites=true"
