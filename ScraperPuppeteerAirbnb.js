@@ -20,7 +20,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         this.featureProcessor.sessionId = this.config.sessionId;
         this.scrapingIndexPath = "./data/separatedFeatures/scrapingIndex.json";
 
-        this.appId = "airbnb";
+        this.appId = this.config.appId;
         this.mongoSaver = new MongoSaver(this.mongoUrl, this.appId, this.config);
 
         this.MongoClient = require('mongodb').MongoClient;
@@ -296,7 +296,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         this.featureProcessor.processAllFeaturesAndCreateIndex();
         this.date = new Date().toLocaleString().replace(/:/g, '_').replace(/ /g, '_').replace(/\//g, '_');
         if (this.config.useMongoDb) await this.mongoSaver.updateStateExecMongo("none", "none", false);
-        this.config.sessionId = "scraping-fotocasa-" + this.config.executionPrefix + "--" + this.date;
+        this.config.sessionId = "scraping-" + this.appId + "--" + this.date;
         fs.writeFileSync("./data/config/scrapingConfig.json", JSON.stringify(this.config));
     }
 }

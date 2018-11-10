@@ -1,7 +1,6 @@
 {
     "sessionId": "scraping-airbnb--2018-11-8_11_29_48",
     "useMongoDb": true,
-    "mongoUrl": "mongodb+srv://fresh:1234@cluster0-ojz1y.mongodb.net/real-state-db?retryWrites=true",
-    "db": "realstate-db",
-    "collection": "summaries"
+    "appId": "airbnb",
+    "mongoUrl": "mongodb+srv://fresh:1234@cluster0-ojz1y.mongodb.net/real-state-db?retryWrites=true"
 }
