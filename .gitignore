@@ -1,5 +1,10 @@
 */scrapingIndex.json
 */data/tmp/*
+*/data/tmp/
+/data/tmp/*
+/data/tmp/
+
+
 # Logs
 logs
 *.log
