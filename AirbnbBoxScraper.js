@@ -57,7 +57,6 @@ module.exports = class AirbnbBoxScraper {
 
 
         await this.page.screenshot({ path: 'example.png' });
-        await this.saveHtml();
         await this.browser.close();
 
         return { numberOfEntries, prize };
@@ -111,10 +110,11 @@ module.exports = class AirbnbBoxScraper {
         try {
             const div = await this.page.$('div._1nhodd4u');
             const text = await (await div.getProperty('textContent')).jsonValue();
-            const prize = text.replace("El precio medio por noche es de ", "").replace("€", "").trim();
+            const prize = parseFloat(text.replace("El precio medio por noche es de ", "").replace("€", "").trim());
             return prize;
         } catch (err) {
             console.log(err);
+            return null;
         }
     }
     async extractNumberOfEntries() {
@@ -130,7 +130,7 @@ module.exports = class AirbnbBoxScraper {
             await this.goToLastPage()
             numberOfEntries = await this.readNumberOfEntries();
         }
-        return numberOfEntries.replace("alojamientos", "").trim();
+        return parseInt(numberOfEntries.replace("alojamientos", "").trim());
     }
 
     async titleNumEntriesLess300() {
@@ -141,7 +141,7 @@ module.exports = class AirbnbBoxScraper {
             return text
         } catch (err) {
             console.log(err);
-            await this.saveHtml();
+            //await this.saveHtml();
             return undefined;
         }
 
@@ -155,7 +155,7 @@ module.exports = class AirbnbBoxScraper {
             return text
         } catch (err) {
             console.log(err);
-            await this.saveHtml();
+            //await this.saveHtml();
             return undefined;
         }
     }
@@ -178,7 +178,7 @@ module.exports = class AirbnbBoxScraper {
             await this.page.waitFor(this.timeWaitClick);
             return text.split(" ")[2].trim();
         } catch (err) {
-            await this.saveHtml();
+            //await this.saveHtml();
             console.log(err);
         }
     }

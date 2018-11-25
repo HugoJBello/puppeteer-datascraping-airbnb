@@ -1,5 +1,8 @@
 {
-    "sessionId": "scraping-airbnb2--2018-11-12_11_29_58",
+    "sessionId": "scraping-testAribnb--2018-11-12_11_29_58",
     "useMongoDb": true,
-    "appId": "airbnb"
+    "appId": "testAribnb",
+    "method": "boundingBox",
+    "deviceId": "gCloud",
+    "useSavedFeaturesInFile": true
 }

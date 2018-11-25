@@ -1,5 +1,5 @@
 const MongoSaver = require('./MongoDAO');
-const FeatureProcessor = require('./FeatureProcessor');
+const FeatureProcessorCusec = require('./FeatureProcessorCusec');
 const AirbnbBoxScraper = require('./AirbnbBoxScraper');
 const fs = require('fs');
 
@@ -11,7 +11,7 @@ module.exports = class ScraperPuppeteerAirbnb {
         this.mongoUrl = process.env['MONGO_URL'];
 
         this.config = require("./data/config/scrapingConfig.json");
-        this.featureProcessor = new FeatureProcessor();
+        this.featureProcessor = new FeatureProcessorCusec();
         this.featureProcessor.sessionId = this.config.sessionId;
         this.scrapingIndexPath = "./data/separatedFeatures/scrapingIndex.json";
 
@@ -98,15 +98,10 @@ module.exports = class ScraperPuppeteerAirbnb {
 
     async extractFromCusec(cusecFeature) {
         try {
-
-            let index = require("./data/separatedFeatures/scrapingIndex.json");
-            const nmun = cusecFeature.nmun;
-            const cusec = cusecFeature.cusec;
             const boundingBox = cusecFeature.boundingBox;
             const result = await this.boxScraper.extractPrizeAndMetersUsingBoundingBox(boundingBox);
 
             return { date: new Date(), number_of_ads: result.numberOfEntries, average_prize: result.prize };
-            //-------------------
         } catch (err) {
             console.log(err);
             return undefined;
