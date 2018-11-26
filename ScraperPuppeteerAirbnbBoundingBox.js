@@ -22,7 +22,7 @@ module.exports = class ScraperPuppeteerAirbnbBoundingBox {
         this.featureProcessor.sessionId = this.config.sessionId;
 
         this.boxScraper = new BoxScraper();
-        this.appId = "fotocasa";
+        this.appId = this.config.appId;
         this.mongoSaver = new MongoSaver(this.mongoUrl, this.appId, this.config);
 
         this.tmpDir = "data/tmp/"
@@ -108,8 +108,8 @@ module.exports = class ScraperPuppeteerAirbnbBoundingBox {
             const boundingBox = piece.boundingBox;
 
             const results = await this.boxScraper.extractPrizeAndMetersUsingBoundingBox(boundingBox);
-            
-            return { date: new Date(), number_of_ads: results.numberOfAds, average_prize: results.averagePrize, ads_info: results.adData  };
+
+            return { date: new Date(), number_of_ads: results.numberOfAds, average_prize: results.averagePrize, ads_info: results.adData };
         } catch (err) {
             console.log(err);
             return undefined;
